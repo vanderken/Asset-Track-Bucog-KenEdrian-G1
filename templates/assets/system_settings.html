@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}System Settings - AssetTrack{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1 text-white fw-bold">System Settings</h3>
+    <p class="text-secondary small mb-0">Configure lending policies, overdue thresholds, and optional inventory fields.</p>
+  </div>
+</div>
+
+<div class="at-card p-4" style="max-width:640px;">
+  <form method="post">
+    {% csrf_token %}
+    <h5 class="text-white fw-bold mb-3"><i class="bi bi-sliders text-primary me-2"></i>General Policies</h5>
+    <div class="form-check form-switch mb-3">
+      {{ form.self_checkout_allowed }}
+      <label class="form-check-label text-light fw-medium ms-2">Allow employee self-checkout requests</label>
+      <div class="form-text text-secondary small">When enabled, employees can submit device requests from their dashboard.</div>
+    </div>
+    
+    <div class="mb-4">
+      <label class="form-label text-light fw-semibold">Overdue threshold (days)</label>
+      {{ form.overdue_days }}
+      <div class="form-text text-secondary small">Number of days before an active loan is flagged as overdue.</div>
+    </div>
+
+    <hr class="border-secondary my-4">
+
+    <h5 class="text-white fw-bold mb-2"><i class="bi bi-toggles text-info me-2"></i>Optional Device Fields</h5>
+    <p class="text-secondary small mb-3">Enable or disable optional fields shown on the Add/Edit Device forms:</p>
+
+    <div class="d-flex flex-column gap-2 mb-4">
+      <div class="form-check form-switch">
+        {{ form.field_purchase_date_enabled }}
+        <label class="form-check-label text-light ms-2">Purchase Date</label>
+      </div>
+      <div class="form-check form-switch">
+        {{ form.field_brand_enabled }}
+        <label class="form-check-label text-light ms-2">Brand / Manufacturer</label>
+      </div>
+      <div class="form-check form-switch">
+        {{ form.field_location_enabled }}
+        <label class="form-check-label text-light ms-2">Physical Location (Room / Desk)</label>
+      </div>
+      <div class="form-check form-switch">
+        {{ form.field_notes_enabled }}
+        <label class="form-check-label text-light ms-2">Internal Notes</label>
+      </div>
+      <div class="form-check form-switch">
+        {{ form.field_warranty_expiry_enabled }}
+        <label class="form-check-label text-light ms-2">Warranty Expiration Date</label>
+      </div>
+    </div>
+
+    <button class="btn btn-at-primary px-4"><i class="bi bi-check-lg me-1"></i>Save Settings</button>
+  </form>
+</div>
+{% endblock %}

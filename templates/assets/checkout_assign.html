@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Assign Device - AssetTrack{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h3 class="mb-1 text-white fw-bold">Assign Device to Employee</h3>
+    <p class="text-secondary small mb-0">Select an available device and assign it directly to an employee.</p>
+  </div>
+  <a href="{% url 'assets:active_checkouts' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i> Active Checkouts</a>
+</div>
+
+<div class="at-card p-4" style="max-width:620px;">
+  <form method="post" id="assign-form" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="mb-3">
+        <label class="form-label text-light fw-semibold" for="{{ field.id_for_label }}">
+          {{ field.label }}
+          {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.name == 'device' and field.field.queryset.count == 0 %}
+          <div class="alert alert-warning mt-2 d-flex align-items-center justify-content-between p-2">
+            <span class="small"><i class="bi bi-exclamation-triangle me-1"></i>No devices available to assign.</span>
+            <a href="{% url 'assets:device_create' %}" class="btn btn-sm btn-at-primary">Add Device</a>
+          </div>
+        {% endif %}
+        {% if field.errors %}
+          <div class="text-danger small mt-1 fw-medium"><i class="bi bi-exclamation-circle me-1"></i>{{ field.errors.0 }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <div class="d-flex gap-2 mt-4">
+      <button type="submit" class="btn btn-at-primary px-4"><i class="bi bi-person-check me-1"></i>Assign Device</button>
+      <a href="{% url 'assets:active_checkouts' %}" class="btn btn-outline-light px-3">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const deviceSelect = document.getElementById("id_device");
+    // If the device dropdown has no selectable devices (only the placeholder or 0 options), redirect to add device
+    if (deviceSelect) {
+      const realOptions = Array.from(deviceSelect.options).filter(opt => opt.value !== "");
+      if (realOptions.length === 0) {
+        window.location.href = "{% url 'assets:device_create' %}";
+      }
+    }
+  })();
+</script>
+{% endblock %}
