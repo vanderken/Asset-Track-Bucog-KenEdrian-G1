@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+{% block title %}Company Settings - AssetTrack{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1 text-white fw-bold">Company Profile &amp; Membership</h3>
+    <p class="text-secondary small mb-0">Configure company details, invite employees with your company code, and manage membership requests.</p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="at-card p-4 mb-4">
+      <h5 class="text-white fw-bold mb-3"><i class="bi bi-building-gear text-primary me-2"></i>Company Details</h5>
+      <form method="post" id="companyForm" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label text-light fw-semibold" for="{{ form.name.id_for_label }}">Company Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-light fw-semibold" for="{{ form.address.id_for_label }}">Company Address</label>
+          {{ form.address }}
+          {% if form.address.errors %}<div class="text-danger small mt-1">{{ form.address.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-light fw-semibold" for="{{ form.code.id_for_label }}">Company Code</label>
+          <div class="input-group">
+            {{ form.code }}
+            <button type="button" class="btn btn-outline-info" id="btnRegenerateCode" title="Generate Random Code">
+              <i class="bi bi-shuffle me-1"></i>Random Code
+            </button>
+            <button type="button" class="btn btn-outline-light" id="btnCopyCode" title="Copy Code">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          <div class="form-text text-secondary small">Share this code with employees to allow them to request joining your company.</div>
+          {% if form.code.errors %}<div class="text-danger small mt-1">{{ form.code.errors.0 }}</div>{% endif %}
+        </div>
+        <button type="submit" class="btn btn-at-primary px-4"><i class="bi bi-check-lg me-1"></i>Save Company</button>
+      </form>
+    </div>
+
+    <div class="at-card p-4">
+      <h5 class="text-white fw-bold mb-2"><i class="bi bi-person-plus text-info me-2"></i>Add Employee</h5>
+      <p class="text-secondary small mb-3">Directly assign a registered employee to your company without waiting for an invitation code.</p>
+      <form id="addMemberForm" novalidate>
+        <div class="input-group mb-2">
+          <input type="text" id="addMemberInput" class="form-control" placeholder="Username or email..." required>
+          <button type="submit" class="btn btn-at-primary" id="btnAddMember">
+            <i class="bi bi-plus-lg me-1"></i>Add
+          </button>
+        </div>
+        <div class="form-text text-secondary small">Enter the user's username or email address to attach them immediately.</div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="at-card p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-white fw-bold mb-0"><i class="bi bi-person-plus text-success me-2"></i>Join Requests</h5>
+        <span class="badge bg-success-subtle text-success border border-success-subtle" id="joinCount">{{ join_requests|length }} Pending</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle" id="joinTable">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Email</th>
+              <th>Requested</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="joinTableBody">
+          {% for req in join_requests %}
+            <tr id="req-row-{{ req.pk }}">
+              <td class="text-white fw-medium">{{ req.user.get_full_name|default:req.user.username }}</td>
+              <td class="text-light-muted">{{ req.user.email|default:"&mdash;" }}</td>
+              <td class="text-secondary small">{{ req.created_at|date:"M d, H:i" }}</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-sm btn-success px-2 me-1 btn-review-action" data-pk="{{ req.pk }}" data-action="accept" data-type="join">
+                  <i class="bi bi-check-lg me-1"></i>Accept
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger px-2 btn-review-action" data-pk="{{ req.pk }}" data-action="reject" data-type="join">
+                  <i class="bi bi-x-lg me-1"></i>Reject
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr id="empty-join-row">
+              <td colspan="4" class="text-center py-3 text-secondary">No pending join requests.</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="at-card p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-white fw-bold mb-0"><i class="bi bi-box-arrow-right text-warning me-2"></i>Leave Requests</h5>
+        <span class="badge bg-warning-subtle text-warning border border-warning-subtle" id="leaveCount">{{ leave_requests|length }} Pending</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle" id="leaveTable">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Email</th>
+              <th>Requested</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="leaveTableBody">
+          {% for req in leave_requests %}
+            <tr id="req-row-{{ req.pk }}">
+              <td class="text-white fw-medium">{{ req.user.get_full_name|default:req.user.username }}</td>
+              <td class="text-light-muted">{{ req.user.email|default:"&mdash;" }}</td>
+              <td class="text-secondary small">{{ req.created_at|date:"M d, H:i" }}</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-sm btn-warning px-2 me-1 text-dark btn-review-action" data-pk="{{ req.pk }}" data-action="accept" data-type="leave">
+                  <i class="bi bi-check-lg me-1"></i>Approve
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger px-2 btn-review-action" data-pk="{{ req.pk }}" data-action="reject" data-type="leave">
+                  <i class="bi bi-x-lg me-1"></i>Reject
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr id="empty-leave-row">
+              <td colspan="4" class="text-center py-3 text-secondary">No pending leave requests.</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="at-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-white fw-bold mb-0"><i class="bi bi-people text-info me-2"></i>Company Members</h5>
+        <span class="badge bg-secondary-subtle text-info border border-secondary-subtle" id="memberCountBadge">{{ members|length }} Employees</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle" id="membersTable">
+          <thead>
+            <tr>
+              <th>Employee Name</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody id="membersTableBody">
+          {% for member in members %}
+            <tr id="member-row-{{ member.pk }}">
+              <td class="text-white fw-medium">{{ member.get_full_name|default:"Not set" }}</td>
+              <td><code class="text-light-muted">@{{ member.username }}</code></td>
+              <td class="text-light-muted">{{ member.email|default:"&mdash;" }}</td>
+              <td><span class="badge bg-secondary-subtle text-info border border-secondary-subtle">{{ member.get_role_display }}</span></td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-member" data-pk="{{ member.pk }}" data-name="{{ member.get_full_name|default:member.username }}" title="Remove from company">
+                  <i class="bi bi-person-dash"></i>
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr id="empty-members-row">
+              <td colspan="5" class="text-center py-3 text-secondary">No company members yet. Share your company code or add employees above.</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const codeInput = document.getElementById("id_code");
+  const copyBtn = document.getElementById("btnCopyCode");
+  const regenBtn = document.getElementById("btnRegenerateCode");
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text || "";
+    return div.innerHTML;
+  }
+
+  function getMembersCount() {
+    const rows = document.querySelectorAll("#membersTableBody tr:not(#empty-members-row)");
+    return rows.length;
+  }
+
+  function updateMemberCountText() {
+    const badge = document.getElementById("memberCountBadge");
+    if (!badge) return;
+    const cnt = getMembersCount();
+    badge.textContent = cnt + " Employees";
+  }
+
+  function appendMemberRow(member) {
+    const tbody = document.getElementById("membersTableBody");
+    if (!tbody) return;
+    const emptyRow = document.getElementById("empty-members-row");
+    if (emptyRow) emptyRow.remove();
+
+    const existingRow = document.getElementById("member-row-" + member.id);
+    if (existingRow) {
+      existingRow.style.backgroundColor = "rgba(16, 185, 129, 0.2)";
+      setTimeout(() => { existingRow.style.backgroundColor = ""; }, 1800);
+      return;
+    }
+
+    const tr = document.createElement("tr");
+    tr.id = "member-row-" + member.id;
+    tr.style.backgroundColor = "rgba(16, 185, 129, 0.25)";
+    tr.style.transition = "background-color 1.5s ease";
+    tr.innerHTML = `
+      <td class="text-white fw-medium">${escapeHtml(member.full_name || 'Not set')}</td>
+      <td><code class="text-light-muted">@${escapeHtml(member.username)}</code></td>
+      <td class="text-light-muted">${escapeHtml(member.email || '—')}</td>
+      <td><span class="badge bg-secondary-subtle text-info border border-secondary-subtle">${escapeHtml(member.role_display || 'Employee')}</span></td>
+      <td class="text-end">
+        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-member" data-pk="${member.id}" data-name="${escapeHtml(member.full_name || member.username)}" title="Remove from company">
+          <i class="bi bi-person-dash"></i>
+        </button>
+      </td>
+    `;
+    tbody.prepend(tr);
+    setTimeout(() => { tr.style.backgroundColor = ""; }, 1800);
+    bindRemoveButtons();
+    updateMemberCountText();
+  }
+
+  function removeMemberRow(memberId) {
+    const row = document.getElementById("member-row-" + memberId);
+    if (row) {
+      row.style.opacity = "0";
+      row.style.transition = "opacity 0.3s ease";
+      setTimeout(() => {
+        row.remove();
+        updateMemberCountText();
+        const tbody = document.getElementById("membersTableBody");
+        if (tbody && tbody.querySelectorAll("tr:not(#empty-members-row)").length === 0) {
+          const emptyTr = document.createElement("tr");
+          emptyTr.id = "empty-members-row";
+          emptyTr.innerHTML = '<td colspan="5" class="text-center py-3 text-secondary">No company members yet. Share your company code or add employees above.</td>';
+          tbody.appendChild(emptyTr);
+        }
+      }, 300);
+    }
+  }
+
+  function updateRequestCount(type, delta) {
+    const badgeId = type === "join" ? "joinCount" : "leaveCount";
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+    const match = badge.textContent.match(/\d+/);
+    let cur = match ? parseInt(match[0], 10) : 0;
+    cur = Math.max(0, cur + delta);
+    badge.textContent = cur + " Pending";
+
+    const tableBodyId = type === "join" ? "joinTableBody" : "leaveTableBody";
+    const emptyRowId = type === "join" ? "empty-join-row" : "empty-leave-row";
+    const tbody = document.getElementById(tableBodyId);
+    if (tbody && cur === 0 && !document.getElementById(emptyRowId)) {
+      const tr = document.createElement("tr");
+      tr.id = emptyRowId;
+      const msg = type === "join" ? "No pending join requests." : "No pending leave requests.";
+      tr.innerHTML = `<td colspan="4" class="text-center py-3 text-secondary">${msg}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function bindRemoveButtons() {
+    document.querySelectorAll(".btn-remove-member").forEach(function (btn) {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = "true";
+      btn.addEventListener("click", function () {
+        const pk = this.getAttribute("data-pk");
+        const name = this.getAttribute("data-name") || "this employee";
+        if (!confirm(`Are you sure you want to remove ${name} from your company?`)) return;
+
+        const row = document.getElementById("member-row-" + pk);
+        if (row) {
+          row.style.opacity = "0.4";
+          row.style.pointerEvents = "none";
+        }
+
+        const url = `/accounts/company/remove-member/${pk}/`;
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCsrfToken(),
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            removeMemberRow(pk);
+            showToast(data.message, "success");
+          } else {
+            if (row) {
+              row.style.opacity = "1";
+              row.style.pointerEvents = "auto";
+            }
+            showToast(data.message || "Failed to remove member.", "error");
+          }
+        })
+        .catch(() => {
+          if (row) {
+            row.style.opacity = "1";
+            row.style.pointerEvents = "auto";
+          }
+          showToast("Database rejected request. Action could not be completed.", "error");
+        });
+      });
+    });
+  }
+
+  bindRemoveButtons();
+
+  if (copyBtn && codeInput) {
+    copyBtn.addEventListener("click", function () {
+      if (!codeInput.value) return;
+      navigator.clipboard.writeText(codeInput.value).then(function () {
+        showToast("Company code copied to clipboard: " + codeInput.value, "info");
+      });
+    });
+  }
+
+  if (regenBtn && codeInput) {
+    regenBtn.addEventListener("click", function () {
+      const randSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const previewCode = "CMP-" + randSuffix;
+      const oldCode = codeInput.value;
+      codeInput.value = previewCode;
+
+      fetch("{% url 'accounts:company_regenerate_code' %}", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCsrfToken(),
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          codeInput.value = data.code;
+          showToast(data.message, "success");
+        } else {
+          codeInput.value = oldCode;
+          showToast(data.message || "Failed to generate company code.", "error");
+        }
+      })
+      .catch(() => {
+        showToast("Code generated locally: " + previewCode + ". Click Save Company to persist.", "warning");
+      });
+    });
+  }
+
+  const addMemberForm = document.getElementById("addMemberForm");
+  const addMemberInput = document.getElementById("addMemberInput");
+  const btnAddMember = document.getElementById("btnAddMember");
+
+  if (addMemberForm && addMemberInput) {
+    addMemberForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const val = addMemberInput.value.trim();
+      if (!val) {
+        showToast("Please enter a username or email.", "warning");
+        addMemberInput.focus();
+        return;
+      }
+
+      btnAddMember.disabled = true;
+      btnAddMember.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Adding...';
+
+      const formData = new FormData();
+      formData.append("identifier", val);
+
+      fetch("{% url 'accounts:company_add_member' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-CSRFToken": getCsrfToken(),
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      })
+      .then(r => r.json().then(data => ({ status: r.status, body: data })))
+      .then(res => {
+        btnAddMember.disabled = false;
+        btnAddMember.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add';
+        if (res.status === 200 && res.body.success) {
+          appendMemberRow(res.body.member);
+          addMemberInput.value = "";
+          showToast(res.body.message, "success");
+        } else {
+          showToast(res.body.message || "Failed to add member.", "error");
+        }
+      })
+      .catch(() => {
+        btnAddMember.disabled = false;
+        btnAddMember.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add';
+        showToast("Database rejected request. Action could not be completed.", "error");
+      });
+    });
+  }
+
+  document.querySelectorAll(".btn-review-action").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const pk = this.getAttribute("data-pk");
+      const action = this.getAttribute("data-action");
+      const type = this.getAttribute("data-type") || "join";
+      const row = document.getElementById("req-row-" + pk);
+
+      if (row) {
+        row.style.opacity = "0.4";
+        row.style.pointerEvents = "none";
+      }
+
+      const url = "/accounts/company/request/" + pk + "/" + action + "/";
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCsrfToken(),
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          if (row) {
+            row.style.opacity = "0";
+            row.style.transition = "opacity 0.25s ease";
+            setTimeout(() => {
+              row.remove();
+              updateRequestCount(type, -1);
+            }, 250);
+          }
+          if (data.action === "accept") {
+            if (data.request_type === "join" && data.member) {
+              appendMemberRow(data.member);
+            } else if (data.request_type === "leave" && data.member) {
+              removeMemberRow(data.member.id);
+            }
+          }
+          showToast(data.message, "success");
+        } else {
+          if (row) {
+            row.style.opacity = "1";
+            row.style.pointerEvents = "auto";
+          }
+          showToast(data.message || "Server rejected request.", "error");
+        }
+      })
+      .catch(() => {
+        if (row) {
+          row.style.opacity = "1";
+          row.style.pointerEvents = "auto";
+        }
+        showToast("Database rejected request. Action could not be completed.", "error");
+      });
+    });
+  });
+});
+</script>
+{% endblock %}
