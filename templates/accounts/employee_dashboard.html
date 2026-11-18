@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Employee Dashboard - AssetTrack{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1 text-white fw-bold">Employee Dashboard</h3>
+    <p class="text-secondary small mb-0">View your assigned hardware, pending loan requests, and checkout status.</p>
+  </div>
+  {% if settings.self_checkout_allowed and company %}
+  <a href="{% url 'assets:my_checkout_request' %}" class="btn btn-at-primary"><i class="bi bi-plus-lg me-1"></i> Request a Device</a>
+  {% endif %}
+</div>
+
+{% if company %}
+<div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <i class="bi bi-building me-2"></i>
+    <strong>{{ company.name }}</strong>
+    <span class="text-secondary ms-2">&middot; Address: {{ company.address|default:"Headquarters" }}</span>
+  </div>
+  <a href="{% url 'accounts:employee_join_company' %}" class="btn btn-sm btn-outline-info">Company Affiliation &rarr;</a>
+</div>
+{% else %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>You are not affiliated with a company yet.</strong>
+    <span class="small ms-1">Join with a company code to request and track company equipment.</span>
+  </div>
+  <a href="{% url 'accounts:employee_join_company' %}" class="btn btn-sm btn-warning">Join Company &rarr;</a>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="at-stat">
+      <div class="d-flex justify-content-between align-items-center text-secondary small fw-semibold">
+        <span>MY ACTIVE LOANS</span>
+        <i class="bi bi-laptop fs-5 text-info"></i>
+      </div>
+      <div class="value text-white">{{ my_active.count }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="at-stat">
+      <div class="d-flex justify-content-between align-items-center text-secondary small fw-semibold">
+        <span>PENDING REQUESTS</span>
+        <i class="bi bi-clock fs-5 text-warning"></i>
+      </div>
+      <div class="value text-warning">{{ my_pending.count }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="at-stat">
+      <div class="d-flex justify-content-between align-items-center text-secondary small fw-semibold">
+        <span>AVAILABLE POOL</span>
+        <i class="bi bi-check-circle fs-5 text-success"></i>
+      </div>
+      <div class="value text-success">{{ available_devices.count }}</div>
+    </div>
+  </div>
+</div>
+
+{% if not settings.self_checkout_allowed %}
+<div class="alert alert-info d-flex align-items-center mb-4">
+  <i class="bi bi-info-circle fs-5 me-2"></i>
+  <span>Self-checkout requests are currently disabled. Contact IT support staff to borrow equipment.</span>
+</div>
+{% endif %}
+
+<div class="at-card p-4 mb-4">
+  <h5 class="text-white fw-bold mb-3"><i class="bi bi-box-seam text-info me-2"></i>My Active Items</h5>
+  {% if my_active %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Checked Out</th>
+          <th>Due Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for c in my_active %}
+        <tr>
+          <td class="text-white fw-medium">{{ c.device.asset_tag }} - {{ c.device.model_name }}</td>
+          <td class="text-secondary small">{{ c.checked_out_at|date:"M d, Y" }}</td>
+          <td class="text-light">{{ c.due_date }}</td>
+          <td>
+            {% if c.is_overdue %}
+              <span class="badge at-badge-overdue"><i class="bi bi-exclamation-circle me-1"></i>Overdue</span>
+            {% else %}
+              <span class="badge at-badge-borrowed"><i class="bi bi-check-circle me-1"></i>Active</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-secondary">
+    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+    <p class="mb-0 text-light-muted">You have no active checkouts.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="at-card p-4">
+  <h5 class="text-white fw-bold mb-3"><i class="bi bi-clock-history text-primary me-2"></i>Pending Requests</h5>
+  {% if my_pending %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Requested On</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for c in my_pending %}
+        <tr>
+          <td class="text-white fw-medium">
+            {% if c.device %}
+              {{ c.device.asset_tag }} &middot; {{ c.device.model_name }}
+            {% else %}
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle me-1">New Device</span>
+              {{ c.requested_device_name }}
+              {% if c.requested_category %}<span class="badge bg-secondary-subtle text-info border border-secondary-subtle small ms-1">{{ c.requested_category.name }}</span>{% endif %}
+            {% endif %}
+          </td>
+          <td class="text-secondary small">{{ c.requested_at|date:"M d, Y H:i" }}</td>
+          <td><span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pending IT Approval</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-secondary">
+    <i class="bi bi-check2-circle fs-2 d-block mb-2 text-success"></i>
+    <p class="mb-0 text-light-muted">No pending requests.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
